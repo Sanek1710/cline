@@ -26,6 +26,7 @@ import { migratePlanActGlobalToWorkspaceStorage, migrateCustomInstructionsToGlob
 
 import { sendFocusChatInputEvent } from "./core/controller/ui/subscribeToFocusChatInput"
 import { FileContextTracker } from "./core/context/context-tracking/FileContextTracker"
+import { InlineCompletionProvider } from "./integrations/completion/InlineCompletionProvider"
 /*
 Built using https://github.com/microsoft/vscode-webview-ui-toolkit
 
@@ -628,6 +629,14 @@ export async function activate(context: vscode.ExtensionContext) {
 				outputChannel.dispose()
 			}
 		}),
+	)
+
+	// Register inline completion provider
+	context.subscriptions.push(
+		vscode.languages.registerInlineCompletionItemProvider(
+			{ pattern: "**" }, // Register for all file types
+			new InlineCompletionProvider(),
+		),
 	)
 
 	return createClineAPI(outputChannel, sidebarWebview.controller)

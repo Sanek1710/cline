@@ -2,13 +2,13 @@ import { Anthropic } from "@anthropic-ai/sdk"
 import OpenAI, { AzureOpenAI } from "openai"
 import { withRetry } from "../retry"
 import { ApiHandlerOptions, azureOpenAiDefaultApiVersion, ModelInfo, openAiModelInfoSaneDefaults } from "@shared/api"
-import { ApiHandler } from "../index"
+import { ApiHandler, SingleCompletionHandler } from "../index"
 import { convertToOpenAiMessages } from "../transform/openai-format"
 import { ApiStream } from "../transform/stream"
 import { convertToR1Format } from "../transform/r1-format"
 import type { ChatCompletionReasoningEffort } from "openai/resources/chat/completions"
 
-export class OpenAiHandler implements ApiHandler {
+export class OpenAiHandler implements ApiHandler, SingleCompletionHandler {
 	private options: ApiHandlerOptions
 	private client: OpenAI
 
@@ -105,6 +105,43 @@ export class OpenAiHandler implements ApiHandler {
 				}
 			}
 		}
+	}
+
+	@withRetry()
+	async completePrompt(prompt: string): Promise<string> {
+		const modelId = this.options.openAiModelId ?? ""
+		const isDeepseekReasoner = modelId.includes("deepseek-reasoner")
+		const isR1FormatRequired = this.options.openAiModelInfo?.isR1FormatRequired ?? false
+		const isReasoningModelFamily = modelId.includes("o1") || modelId.includes("o3") || modelId.includes("o4")
+
+		let openAiMessages: OpenAI.Chat.ChatCompletionMessageParam[] = [{ role: "user", content: prompt }]
+		let temperature: number | undefined = this.options.openAiModelInfo?.temperature ?? openAiModelInfoSaneDefaults.temperature
+		let reasoningEffort: ChatCompletionReasoningEffort | undefined = undefined
+		let maxTokens: number | undefined
+
+		if (this.options.openAiModelInfo?.maxTokens && this.options.openAiModelInfo.maxTokens > 0) {
+			maxTokens = Number(this.options.openAiModelInfo.maxTokens)
+		}
+
+		if (isDeepseekReasoner || isR1FormatRequired) {
+			openAiMessages = convertToR1Format([{ role: "user", content: prompt }])
+		}
+
+		if (isReasoningModelFamily) {
+			openAiMessages = [{ role: "developer", content: prompt }]
+			temperature = undefined // does not support temperature
+			reasoningEffort = (this.options.reasoningEffort as ChatCompletionReasoningEffort) || "medium"
+		}
+
+		const response = await this.client.chat.completions.create({
+			model: modelId,
+			messages: openAiMessages,
+			temperature,
+			max_tokens: maxTokens,
+			reasoning_effort: reasoningEffort,
+		})
+
+		return response.choices[0]?.message?.content || ""
 	}
 
 	getModel(): { id: string; info: ModelInfo } {

@@ -1,12 +1,13 @@
 import { Anthropic } from "@anthropic-ai/sdk"
 import { Message, Ollama } from "ollama"
-import { ApiHandler } from "../"
+import { ApiHandler, SingleCompletionHandler } from "../"
 import { ApiHandlerOptions, ModelInfo, openAiModelInfoSaneDefaults } from "../../shared/api"
 import { convertToOllamaMessages } from "../transform/ollama-format"
 import { ApiStream } from "../transform/stream"
 import { withRetry } from "../retry"
+import { convertToOpenAiMessages } from "../transform/openai-format"
 
-export class OllamaHandler implements ApiHandler {
+export class OllamaHandler implements ApiHandler, SingleCompletionHandler {
 	private options: ApiHandlerOptions
 	private client: Ollama
 
@@ -84,5 +85,18 @@ export class OllamaHandler implements ApiHandler {
 				? { ...openAiModelInfoSaneDefaults, contextWindow: Number(this.options.ollamaApiOptionsCtxNum) || 32768 }
 				: openAiModelInfoSaneDefaults,
 		}
+	}
+
+	@withRetry()
+	async completePrompt(prompt: string): Promise<string> {
+		const response = await this.client.chat({
+			model: this.options.ollamaModelId ?? "",
+			messages: [{ role: "user", content: prompt }],
+			options: {
+				num_ctx: Number(this.options.ollamaApiOptionsCtxNum) || 32768,
+			},
+		})
+
+		return response.message.content || ""
 	}
 }

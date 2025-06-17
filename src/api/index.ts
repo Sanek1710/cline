@@ -38,7 +38,9 @@ export interface SingleCompletionHandler {
 	completePrompt(prompt: string): Promise<string>
 }
 
-export function buildApiHandler(configuration: ApiConfiguration): ApiHandler {
+export type ApiHandlerWithCompletion = ApiHandler & Partial<SingleCompletionHandler>
+
+export function buildApiHandler(configuration: ApiConfiguration): ApiHandlerWithCompletion {
 	const { apiProvider, ...options } = configuration
 	switch (apiProvider) {
 		case "anthropic":
