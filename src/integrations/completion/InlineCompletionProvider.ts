@@ -10,13 +10,52 @@ export class InlineCompletionProvider implements vscode.InlineCompletionItemProv
 	private lastPosition: vscode.Position | null = null
 	private readonly MAX_CONTEXT_LINES = 50
 	private readonly DEBOUNCE_MS = 300
+	private disposables: vscode.Disposable[] = []
 
 	constructor() {
+		this.initializeApi()
+
+		// Listen for settings changes
+		this.disposables.push(
+			vscode.workspace.onDidChangeConfiguration(async (event) => {
+				if (event.affectsConfiguration("cline.autocompletion")) {
+					await this.initializeApi()
+				}
+			}),
+		)
+	}
+
+	dispose() {
+		this.disposables.forEach((d) => d.dispose())
+	}
+
+	private async initializeApi() {
 		try {
-			// Create a simple configuration for the default provider (Anthropic)
+			// Get the current settings
+			const workspaceConfig = vscode.workspace.getConfiguration("cline")
+			const apiConfig = workspaceConfig.get<ApiConfiguration>("apiConfiguration")
+			const autocompletionConfig = workspaceConfig.get<ApiConfiguration>("autocompletion")
+
+			if (!apiConfig || !autocompletionConfig) {
+				Logger.log("No API configuration found")
+				return
+			}
+
+			// Create a new configuration that inherits from the main config but overrides with autocompletion settings
 			const config: ApiConfiguration = {
-				apiProvider: "anthropic",
-				apiModelId: "claude-3-sonnet-20240229", // Use a good default model
+				...apiConfig,
+				apiProvider: autocompletionConfig.apiProvider || apiConfig.apiProvider,
+				apiModelId: autocompletionConfig.apiModelId || apiConfig.apiModelId,
+				// Provider-specific settings
+				...(autocompletionConfig.apiProvider === "openai" && {
+					openAiApiKey: autocompletionConfig.openAiApiKey || apiConfig.openAiApiKey,
+					openAiModelId: autocompletionConfig.openAiModelId || apiConfig.openAiModelId,
+					openAiBaseUrl: autocompletionConfig.openAiBaseUrl || apiConfig.openAiBaseUrl,
+				}),
+				...(autocompletionConfig.apiProvider === "ollama" && {
+					ollamaModelId: autocompletionConfig.ollamaModelId || apiConfig.ollamaModelId,
+					ollamaBaseUrl: autocompletionConfig.ollamaBaseUrl || apiConfig.ollamaBaseUrl,
+				}),
 			}
 
 			this.api = buildApiHandler(config)

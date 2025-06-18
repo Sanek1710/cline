@@ -9,7 +9,17 @@ import { ExtensionMessage } from "@shared/ExtensionMessage"
 import { EmptyRequest, StringRequest } from "@shared/proto/common"
 import { PlanActMode, ResetStateRequest, TogglePlanActModeRequest, UpdateSettingsRequest } from "@shared/proto/state"
 import { VSCodeButton, VSCodeCheckbox, VSCodeLink, VSCodeTextArea } from "@vscode/webview-ui-toolkit/react"
-import { CheckCheck, FlaskConical, Info, LucideIcon, Settings, SquareMousePointer, SquareTerminal, Webhook } from "lucide-react"
+import {
+	CheckCheck,
+	FlaskConical,
+	Info,
+	LucideIcon,
+	Settings,
+	SquareMousePointer,
+	SquareTerminal,
+	Webhook,
+	Code,
+} from "lucide-react"
 import { memo, useCallback, useEffect, useRef, useState } from "react"
 import { useEvent } from "react-use"
 import { Tab, TabContent, TabHeader, TabList, TabTrigger } from "../common/Tab"
@@ -21,6 +31,7 @@ import PreferredLanguageSetting from "./PreferredLanguageSetting" // Added impor
 import Section from "./Section"
 import SectionHeader from "./SectionHeader"
 import TerminalSettingsSection from "./TerminalSettingsSection"
+import AutocompletionSettingsSection from "./AutocompletionSettingsSection"
 import { convertApiConfigurationToProtoApiConfiguration } from "@shared/proto-conversions/state/settings-conversion"
 import { convertChatSettingsToProtoChatSettings } from "@shared/proto-conversions/state/chat-settings-conversion"
 const { IS_DEV } = process.env
@@ -50,6 +61,13 @@ export const SETTINGS_TABS: SettingsTab[] = [
 		tooltipText: "API Configuration",
 		headerText: "API Configuration",
 		icon: Webhook,
+	},
+	{
+		id: "autocompletion",
+		name: "Autocompletion",
+		tooltipText: "Autocompletion Settings",
+		headerText: "Autocompletion Settings",
+		icon: Code,
 	},
 	{
 		id: "general",
@@ -632,6 +650,16 @@ const SettingsView = ({ onDone, targetSection }: SettingsViewProps) => {
 												architect a plan for a cheaper coding model to act on.
 											</p>
 										</div>
+									</Section>
+								</div>
+							)}
+
+							{/* Autocompletion Settings Tab */}
+							{activeTab === "autocompletion" && (
+								<div>
+									{renderSectionHeader("autocompletion")}
+									<Section>
+										<AutocompletionSettingsSection />
 									</Section>
 								</div>
 							)}

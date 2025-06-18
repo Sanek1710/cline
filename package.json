@@ -318,7 +318,34 @@
 		},
 		"configuration": {
 			"title": "Cline",
-			"properties": {}
+			"properties": {
+				"cline.autocompletion": {
+					"type": "object",
+					"default": {},
+					"description": "Settings for code autocompletion",
+					"properties": {
+						"provider": {
+							"type": "string",
+							"enum": [
+								"openai",
+								"ollama"
+							],
+							"default": "openai",
+							"description": "The provider to use for code completions"
+						},
+						"openaiModelId": {
+							"type": "string",
+							"default": "",
+							"description": "The OpenAI model ID to use for completions"
+						},
+						"ollamaModelId": {
+							"type": "string",
+							"default": "",
+							"description": "The Ollama model name to use for completions"
+						}
+					}
+				}
+			}
 		}
 	},
 	"scripts": {
